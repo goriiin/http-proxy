@@ -1,0 +1,10 @@
+services:
+  app_go:
+    build:
+      context: .
+      dockerfile: cmd/Dockerfile
+    ports:
+      - "8080:8080"
+    image: app-image
+    container_name: app_go
+    restart: unless-stopped

@@ -25,7 +25,10 @@
 </body>
 </html>```
 
+```
+
 На вход прокси приходит запрос вида
+
 ```
 GET http://mail.ru/ HTTP/1.1
 Host: mail.ru
@@ -46,6 +49,7 @@ Accept: */*
 ```
 Перенаправить все, что будет получено в ответ
 
+```
 HTTP/1.1 301 Moved Permanently
 Server: nginx/1.14.1
 Date: Sat, 12 Sep 2020 08:04:13 GMT
@@ -53,7 +57,8 @@ Content-Type: text/html
 Content-Length: 185
 Connection: close
 Location: https://mail.ru/
-
+```
+```html
 <html>
 <head><title>301 Moved Permanently</title></head>
 <body bgcolor="white">
@@ -61,7 +66,7 @@ Location: https://mail.ru/
 <hr><center>nginx/1.14.1</center>
 </body>
 </html>
-
+```
 Убедиться, что
 - проксируются все типы запросов (GET, POST, HEAD, OPTIONS)
 - проксируются все заголовки
