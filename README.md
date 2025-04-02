@@ -5,7 +5,8 @@
 
 | # | link |
 |---|------|
-| 1 |      |
+| 1 |[hw2](https://github.com/goriiin/http-proxy/tree/hw1)      |
+| 2 |[hw2](https://github.com/goriiin/http-proxy/tree/hw2)      |
 
 
 Обязательно сделать задание в виде докер контейнера (или docker-compose из нескольких контейнеров), в котором прокси слушает на порту 8080, на порту 8000 веб-апи (например,
