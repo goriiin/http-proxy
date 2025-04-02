@@ -5,7 +5,7 @@
 
 | # | link |
 |---|------|
-| 1 |[hw2](https://github.com/goriiin/http-proxy/tree/hw1)      |
+| 1 |[hw1](https://github.com/goriiin/http-proxy/tree/hw1)      |
 | 2 |[hw2](https://github.com/goriiin/http-proxy/tree/hw2)      |
 
 
