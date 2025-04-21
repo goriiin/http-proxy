@@ -2,11 +2,15 @@ package proxy
 
 import (
 	"bufio"
+	"compress/gzip"
 	"fmt"
+	"github.com/goriiin/go-proxy/internal/domain"
 	"io"
 	"log"
+	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -118,11 +122,120 @@ func (p *Proxy) HandleClientRequest(clientConn net.Conn) {
 
 		log.Printf("Received response %s for %s %s", resp.Status, req.Method, target)
 
+		parsedReq := parseHTTPRequest(req) // helper‑функции ниже
+		parsedResp := parseHTTPResponse(resp)
+		id, _ := p.store.Save(parsedReq, parsedResp)
+		log.Printf("Saved request with id=%d", id)
+
 		err = resp.Write(clientConn)
 		if err != nil {
 			log.Printf("Failed to write response back to client for %s: %v", target, err)
 		} else {
 			log.Printf("Successfully relayed response for %s %s", req.Method, target)
 		}
+	}
+}
+
+func flattener(v url.Values) map[string]interface{} {
+	out := make(map[string]interface{}, len(v))
+	for k, arr := range v {
+		if len(arr) == 1 {
+			out[k] = arr[0]
+		} else {
+			out[k] = arr
+		}
+	}
+	return out
+}
+
+// ----------- запрос ---------------------------------------------------------
+
+func parseHTTPRequest(r *http.Request) domain.ParsedRequest {
+	// GET‑параметры
+	getParams := flattener(r.URL.Query())
+
+	// Cookie‑заголовок в map
+	cookies := map[string]string{}
+	for _, c := range r.Cookies() {
+		cookies[c.Name] = c.Value
+	}
+
+	// Заголовки
+	hdrs := map[string]string{}
+	for k, v := range r.Header {
+		hdrs[k] = strings.Join(v, ", ")
+	}
+
+	// Тело
+	var bodyCopy strings.Builder
+	if r.Body != nil {
+		raw, _ := io.ReadAll(r.Body)
+		bodyCopy.Write(raw)
+		// вернём тело, чтобы последующая отправка сохранилась
+		r.Body = io.NopCloser(strings.NewReader(bodyCopy.String()))
+	}
+
+	// POST‑/PUT‑параметры (если это form)
+	postParams := map[string]interface{}{}
+	if ct, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); ct == "application/x-www-form-urlencoded" {
+		_ = r.ParseForm()
+		postParams = flattener(r.PostForm)
+	}
+
+	return domain.ParsedRequest{
+		Method:     r.Method,
+		Path:       r.URL.Path,
+		GetParams:  getParams,
+		PostParams: postParams,
+		Headers:    hdrs,
+		Cookies:    cookies,
+		Body:       bodyCopy.String(),
+		Host:       r.Host,
+		RawRequest: rawRequestDump(r, bodyCopy.String()),
+	}
+}
+
+// rawRequestDump строит текст вида:
+//
+//	GET /path?a=1 HTTP/1.1\r\nHdr: v\r\n\r\nBODY…
+func rawRequestDump(r *http.Request, body string) string {
+	var b strings.Builder
+	b.WriteString(r.Method + " " + r.URL.RequestURI() + " " + r.Proto + "\r\n")
+	for k, v := range r.Header {
+		for _, vv := range v {
+			b.WriteString(k + ": " + vv + "\r\n")
+		}
+	}
+	b.WriteString("\r\n")
+	b.WriteString(body)
+	return b.String()
+}
+
+// ----------- ответ ----------------------------------------------------------
+
+func parseHTTPResponse(resp *http.Response) domain.ParsedResponse {
+	// Декодируем gzip, чтобы в БД хранился настоящий html/json
+	var reader io.Reader = resp.Body
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		if gr, err := gzip.NewReader(resp.Body); err == nil {
+			reader = gr
+			defer gr.Close()
+		}
+	}
+
+	raw, _ := io.ReadAll(reader)
+	resp.Body = io.NopCloser(strings.NewReader(string(raw))) // возвращаем, чтобы прокси мог отправить клиенту
+
+	// Заголовки
+	hdrs := map[string]string{}
+	for k, v := range resp.Header {
+		hdrs[k] = strings.Join(v, ", ")
+	}
+
+	return domain.ParsedResponse{
+		Code:    resp.StatusCode,
+		Message: resp.Status,
+		Headers: hdrs,
+		Body:    string(raw),
 	}
 }
