@@ -1,0 +1,21 @@
+version: '3.7'
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: cmd/Dockerfile
+    image: http-proxy
+    container_name: http-proxy
+    ports:
+      - "8080:8080"
+      - "8000:8000"
+    depends_on:
+      - tarantool
+
+  tarantool:
+    image: tarantool/tarantool:2.10
+    container_name: tarantool
+    ports:
+      - "3301:3301"
+    volumes:
+      - ./tarantool/init.lua:/docker-entrypoint-initdb.d/init.lua
