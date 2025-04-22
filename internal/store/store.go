@@ -25,8 +25,6 @@ func New(addr string) (*Store, error) {
 	return &Store{conn: conn}, nil
 }
 
-// --- сохраняем -------------------------------------------------------------
-
 func (s *Store) Save(req domain.ParsedRequest, resp domain.ParsedResponse) (uint64, error) {
 	tuple := []interface{}{
 		nil, // auto‑inc id (sequence)
@@ -45,13 +43,9 @@ func (s *Store) Save(req domain.ParsedRequest, resp domain.ParsedResponse) (uint
 		return 0, err
 	}
 
-	// Get() вернёт [][]interface{}
-
 	id := data[0].(uint64)
 	return id, nil
 }
-
-// --- выборки ---------------------------------------------------------------
 
 func (s *Store) Get(id uint64) (map[string]interface{}, error) {
 	data, err := s.conn.Do(

@@ -33,7 +33,6 @@ func (sc *Scanner) Repeat(id uint64) (*http.Response, error) {
 	reqMap := item["data"].(map[string]interface{})["request"].(map[string]interface{})
 	raw := reqMap["raw_request"].(string)
 
-	// отправляем «сырым» текстом через локальный прокси
 	resp, err := http.DefaultTransport.RoundTrip(parseRaw(raw))
 	return resp, err
 }
@@ -60,24 +59,19 @@ func (sc *Scanner) DirBuster(id uint64) ([]map[string]interface{}, error) {
 	return findings, nil
 }
 
-// parseRaw превращает «сырой» HTTP‑текст в *http.Request,
-// достаточный для http.Transport.RoundTrip().
 func parseRaw(raw string) *http.Request {
-	// 1) распарсить как обычный HTTP‑запрос
 	req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(raw)))
 	if err != nil {
 		return nil // лучше обработать ошибку наверху — тут кратко
 	}
 
-	// 2) Сформировать полноценный URL (scheme + host):
 	if req.URL.Scheme == "" {
-		req.URL.Scheme = "http" // по умолчанию; при желании можно хранить Scheme отдельно
+		req.URL.Scheme = "http"
 	}
 	if req.URL.Host == "" {
 		req.URL.Host = req.Host
 	}
 
-	// 3) Для RoundTrip() RequestURI должен быть пустым.
 	req.RequestURI = ""
 
 	return req
